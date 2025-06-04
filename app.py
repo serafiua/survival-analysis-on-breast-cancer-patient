@@ -1,78 +1,84 @@
 import streamlit as st
 import pandas as pd
-from lifelines import CoxPHFitter
+import numpy as np
 import matplotlib.pyplot as plt
-
-st.set_page_config(page_title="Breast Cancer Survival Analysis", layout="wide")
-st.title("📊 Cox Proportional Hazards Model - Breast Cancer")
+from lifelines import KaplanMeierFitter, CoxPHFitter
+import seaborn as sns
 
 # Load data
 @st.cache_data
 def load_data():
-    df = pd.read_csv("NKI_cleaned.csv")
-    selected_cols = [
-        "eventdeath", "timerecurrence", "age", "chemo", "hormonal", "amputation",
-        "histtype", "diam", "posnodes", "grade", "angioinv", "lymphinfil"
-    ]
-    return df[selected_cols]
+    return pd.read_csv("NKI_cleaned.csv")
 
 data = load_data()
 
-# Train model
+st.title("🩺 Survival Analysis untuk Pasien Breast Cancer")
+st.markdown("""
+Aplikasi ini menggunakan Kaplan-Meier dan Cox Proportional Hazards untuk menganalisis waktu survival pasien kanker payudara berdasarkan data medis.
+""")
+
+# Sidebar untuk input user
+st.sidebar.header("🔍 Masukkan Karakteristik Pasien")
+
+age = st.sidebar.slider("Umur Pasien", 20, 100, 50)
+chemo = st.sidebar.selectbox("Terapi Kemoterapi", [0, 1])
+hormonal = st.sidebar.selectbox("Terapi Hormonal", [0, 1])
+amputation = st.sidebar.selectbox("Amputasi", [0, 1])
+diam = st.sidebar.slider("Diameter Tumor (mm)", 0, 100, 25)
+posnodes = st.sidebar.slider("Jumlah Node Positif", 0, 30, 3)
+grade = st.sidebar.selectbox("Grade Tumor", sorted(data["grade"].dropna().unique()))
+angioinv = st.sidebar.selectbox("Invasivitas Angio", [0, 1])
+lymphinfil = st.sidebar.selectbox("Infiltrasi Limfosit", [0, 1])
+histtype = st.sidebar.selectbox("Histologi", sorted(data["histtype"].dropna().unique()))
+
+# Tampilkan survival curve berdasarkan fitur tertentu
+st.subheader("📊 Kaplan-Meier Survival Curve")
+feature_to_plot = st.selectbox("Pilih variabel untuk survival curve:", ["chemo", "hormonal", "amputation"])
+
+kmf = KaplanMeierFitter()
+fig, ax = plt.subplots()
+colors = ["#4a6378", "#a42a69"]
+for i, group in enumerate(data[feature_to_plot].unique()):
+    ix = data[feature_to_plot] == group
+    kmf.fit(data.loc[ix, 'timerecurrence'], data.loc[ix, 'eventdeath'], label=f'{feature_to_plot}={group}')
+    kmf.plot_survival_function(ax=ax, color=colors[i % len(colors)])
+
+plt.title(f"Kaplan-Meier Curve berdasarkan {feature_to_plot}")
+plt.xlabel("Waktu (bulan)")
+plt.ylabel("Probabilitas Survival")
+plt.grid(True)
+st.pyplot(fig)
+
+# CoxPHFitter
+st.subheader("📈 Cox Proportional Hazards Model")
 cph = CoxPHFitter()
 cph.fit(data, duration_col='timerecurrence', event_col='eventdeath')
 
-# Show summary
-st.subheader("🔍 Model Summary (Hazard Ratios)")
-st.dataframe(cph.summary.style.format("{:.3f}"))
+st.write("Ringkasan model:")
+st.write(cph.summary)
 
-# Survival plot for a few example patients
-st.subheader("📈 Example Survival Curves")
-st.markdown("Berikut ini survival function untuk 5 pasien pertama di dataset.")
-fig, ax = plt.subplots(figsize=(10, 6))
-cph.predict_survival_function(data.iloc[:5]).plot(ax=ax)
-plt.title("Survival Function - 5 Sample Patients")
-plt.xlabel("Time (months)")
-plt.ylabel("Survival Probability")
-st.pyplot(fig)
+# Tambahan: prediksi hazard ratio untuk input user
+input_df = pd.DataFrame([{
+    "age": age,
+    "chemo": chemo,
+    "hormonal": hormonal,
+    "amputation": amputation,
+    "diam": diam,
+    "posnodes": posnodes,
+    "grade": grade,
+    "angioinv": angioinv,
+    "lymphinfil": lymphinfil,
+    "histtype": histtype,
+}])
 
-# Custom patient prediction
-st.subheader("🧪 Predict Survival for a New Patient")
-with st.form("input_form"):
-    age = st.number_input("Age", 20, 100, 50)
-    chemo = st.selectbox("Chemotherapy", [0, 1])
-    hormonal = st.selectbox("Hormonal Therapy", [0, 1])
-    amputation = st.selectbox("Amputation", [0, 1])
-    histtype = st.selectbox("Histological Type (1=ductal, 2=lobular, ...) ", [1, 2, 3])
-    diam = st.slider("Tumor Diameter (mm)", 0, 100, 25)
-    posnodes = st.slider("Positive Lymph Nodes", 0, 20, 3)
-    grade = st.selectbox("Tumor Grade", [1, 2, 3])
-    angioinv = st.selectbox("Angio Invasion", [0, 1])
-    lymphinfil = st.selectbox("Lymphocyte Infiltration", [0, 1])
-    submit = st.form_submit_button("Predict")
+st.subheader("🧮 Prediksi Hazard Ratio untuk Pasien Ini")
+try:
+    pred_hr = np.exp(cph.predict_log_partial_hazard(input_df))[0]
+    st.success(f"Hazard Ratio pasien ini diprediksi sebesar **{pred_hr:.2f}**.")
+except:
+    st.warning("Model tidak bisa menghitung prediksi untuk input ini. Coba ubah beberapa nilai.")
 
-    if submit:
-        new_patient = pd.DataFrame([{
-            "age": age,
-            "chemo": chemo,
-            "hormonal": hormonal,
-            "amputation": amputation,
-            "histtype": histtype,
-            "diam": diam,
-            "posnodes": posnodes,
-            "grade": grade,
-            "angioinv": angioinv,
-            "lymphinfil": lymphinfil
-        }])
-
-        surv_func = cph.predict_survival_function(new_patient)
-        st.markdown("### 🔮 Predicted Survival Function")
-        fig2, ax2 = plt.subplots(figsize=(10, 6))
-        surv_func.plot(ax=ax2)
-        plt.title("Survival Prediction for Inputted Patient")
-        plt.xlabel("Time (months)")
-        plt.ylabel("Survival Probability")
-        st.pyplot(fig2)
+st.caption("Data berdasarkan dataset NKI_cleaned.csv")
 
 st.markdown("---")
 st.caption("Model: Cox Proportional Hazards | Data: NKI Breast Cancer | Created by @serafiua on IG")
