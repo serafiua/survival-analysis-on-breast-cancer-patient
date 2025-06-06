@@ -73,6 +73,17 @@ if submitted:
             st.markdown("The risk is **same as the baseline**.")
 
         st.markdown("### 🔮 Predicted Survival Function")
+
+        st.markdown("""
+        **ℹ️ Explanation:**
+        - The graph above represents the **patient's probability of survival** over time (in years).
+        - **X-axis** = time since diagnosis (years).
+        - **Y-axis** = survival probability (ranges from 0 to 1).
+        - A **steep drop** in the curve indicates a higher risk of death early on.
+        - A **flat or slowly declining curve** suggests a better prognosis and longer survival.
+        """)
+
+
         surv_func = cph.predict_survival_function(new_patient)
         fig2, ax2 = plt.subplots(figsize=(10, 6))
         surv_func.plot(ax=ax2)
