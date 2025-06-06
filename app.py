@@ -20,6 +20,11 @@ st.title("🩺 Survival Analysis on Breast Cancer Patient")
 st.markdown("""
 This project uses Kaplan-Meier and Cox Proportional Hazards to analyze the survival time of breast cancer patients based on medical data.
 """)
+st.warning("""
+**⚠️ Disclaimer:**  
+The results from this analysis are based on a specific dataset (NKI Breast Cancer) and may not generalize to other patient populations.
+Use these predictions for educational or exploratory purposes only — not for clinical decision-making.
+""")
 
 # CoxPH model fit
 cph = CoxPHFitter()
@@ -96,4 +101,4 @@ if submitted:
         st.warning(f"⚠️ Cannot calculate prediction: {e}")
 
 st.markdown("---")
-st.caption("Model: Cox Proportional Hazards | Data: NKI Breast Cancer | Created by @serafiua on IG")
+st.caption("Model: Cox Proportional Hazards | Data: NKI Breast Cancer | Created by @serafiua")
