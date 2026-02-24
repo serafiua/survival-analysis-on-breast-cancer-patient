@@ -6,6 +6,14 @@ from lifelines import KaplanMeierFitter, CoxPHFitter
 import seaborn as sns
 
 @st.cache_data
+
+#page config
+st.set_page_config(
+    page_title="Survival Analysis",
+    layout="wide",
+    page_icon="🩺",
+)
+
 def load_data():
     df = pd.read_csv("NKI_cleaned.csv")
     selected_cols = [
