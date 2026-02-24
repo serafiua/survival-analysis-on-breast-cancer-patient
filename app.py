@@ -5,8 +5,6 @@ import matplotlib.pyplot as plt
 from lifelines import KaplanMeierFitter, CoxPHFitter
 import seaborn as sns
 
-@st.cache_data
-
 #page config
 st.set_page_config(
     page_title="Survival Analysis",
@@ -14,6 +12,7 @@ st.set_page_config(
     page_icon="🩺"
 )
 
+@st.cache_data
 def load_data():
     df = pd.read_csv("NKI_cleaned.csv")
     selected_cols = [
