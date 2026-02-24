@@ -11,7 +11,7 @@ import seaborn as sns
 st.set_page_config(
     page_title="Survival Analysis",
     layout="wide",
-    page_icon="🩺",
+    page_icon="🩺"
 )
 
 def load_data():
